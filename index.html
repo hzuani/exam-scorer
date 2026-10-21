@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>시험 문항 배점 도우미</title>
+
+  <style>
+    :root {
+      --ink: #20332f;
+      --muted: #687773;
+      --line: #dfe6e2;
+      --paper: #ffffff;
+      --bg: #f5f3ed;
+      --green: #176b5b;
+      --green-dark: #105347;
+      --green-soft: #e6f2ee;
+      --red: #a74242;
+      --red-soft: #fbecec;
+      --amber: #956116;
+      --amber-soft: #fff4dc;
+      --blue: #356b8a;
+      --blue-soft: #eaf3f8;
+      --blue-dark: #214b63;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      height: 100vh;
+      overflow-x: hidden;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    /* 화면 모드 전용 */
+    .wrap {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 30px 0 10px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-bottom: 22px;
+    }
+
+    .logo {
+      display: grid;
+      width: 44px;
+      height: 44px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--green);
+      color: #fff;
+      font-size: 20px;
+      font-weight: 900;
+    }
+
+    h1, h2, p { margin: 0; }
+    h1 { font-size: 24px; letter-spacing: -0.04em; }
+    .subtitle { margin-top: 4px; color: var(--muted); font-size: 14px; font-weight: 600; }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: 0 8px 28px rgba(30, 55, 48, 0.06);
+    }
+
+    #setupView {
+      margin-top: 5vh;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      width: 100%;
+    }
+
+    .setup-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    .setup {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      padding: 30px;
+    }
+    .setup-ratios {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      margin-top: 5px;
+    }
+
+    label { display: block; min-width: 0; }
+    .label-text {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    
+    .label-desc {
+      color: var(--blue);
+      font-weight: 800;
+    }
+
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      height: 48px;
+      border: 1px solid #ccd7d2;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 15px;
+      font-size: 15px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(23, 107, 91, 0.12);
+    }
+
+    .calculate {
+      grid-column: 1 / -1;
+      height: 52px;
+      margin-top: 10px;
+      border: 0;
+      border-radius: 10px;
+      background: var(--green);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .calculate:hover { background: var(--green-dark); }
+
+    .rule-note {
+      border-top: 1px solid var(--line);
+      padding: 16px 30px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .rule-note strong { color: var(--green); }
+
+    .error {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid #efc6c6;
+      border-radius: 10px;
+      background: var(--red-soft);
+      color: var(--red);
+      padding: 14px 18px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    #resultView {
+      display: none;
+      height: 100%;
+      flex-direction: column;
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .result-header h1 { font-size: 20px; }
+
+    /* 공동 출제 안내 배너 */
+    .info-banner {
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .info-banner strong {
+      color: var(--blue-dark);
+      font-weight: 800;
+    }
+
+    .btn {
+      height: 38px;
+      border: 1px solid #cbd6d1;
+      border-radius: 9px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 15px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover { background: #f0f2f1; }
+    
+    .btn-save {
+      background: var(--green-soft);
+      border-color: #badbcc;
+      color: var(--green-dark);
+    }
+    .btn-save:hover { background: #d1e7dd; }
+
+    .btn-local {
+      background: #eaf3f8;
+      border-color: #c8dfea;
+      color: var(--blue-dark);
+    }
+    .btn-local:hover { background: #d4e8f4; }
+    
+    .btn-danger {
+      color: var(--red);
+      border-color: #efcccc;
+    }
+    .btn-danger:hover { background: var(--red-soft); }
+
+    .actions { display: flex; gap: 8px; align-items: center; }
+
+    .auto-save-toast {
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 0.5s;
+      margin-right: 10px;
+    }
+    .auto-save-toast.show {
+      opacity: 1;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .summary-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 60px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      padding: 12px 16px;
+    }
+    .summary-card span { font-size: 13px; font-weight: 800; }
+    .summary-card strong { font-size: 20px; }
+    .summary-card small { margin-left: 2px; font-size: 12px; color: var(--muted); }
+
+    .level {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .level-high { background: var(--red-soft); color: var(--red); }
+    .level-middle { background: var(--amber-soft); color: var(--amber); }
+    .level-low { background: var(--blue-soft); color: var(--blue); }
+
+    .results-layout {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      flex: 1;
+      min-height: 0; 
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 16px;
+    }
+    h2 { font-size: 16px; letter-spacing: -0.03em; }
+    .section-head p { margin-top: 4px; color: var(--muted); font-size: 11px; }
+
+    .total-chip {
+      border-radius: 999px;
+      background: var(--green-soft);
+      color: var(--green-dark);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .score-columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+      overflow-y: auto;
+      max-height: calc(100vh - 330px);
+    }
+    
+    .score-column {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fafbfa;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .score-column-header {
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 13px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+    }
+    .score-column-header.high { background: var(--red-soft); color: var(--red); }
+    .score-column-header.middle { background: var(--amber-soft); color: var(--amber); }
+    .score-column-header.low { background: var(--blue-soft); color: var(--blue); }
+
+    .score-row {
+      padding: 12px 14px;
+      border-bottom: 1px solid #edf0ee;
+    }
+    .score-row:last-child { border-bottom: 0; }
+
+    /* 점수와 문항 수 강조 레이아웃 */
+    .score-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .score-value { 
+      font-size: 20px; 
+      font-weight: 900; 
+      letter-spacing: -0.03em; 
+      color: var(--ink); 
+    }
+    .needed { 
+      font-size: 14px; 
+      font-weight: 800; 
+      color: var(--green-dark); 
+      background: var(--green-soft); 
+      padding: 4px 8px; 
+      border-radius: 6px; 
+      transition: all 0.2s ease;
+    }
+    
+    .needed.filled {
+      color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .assignment-wrap { position: relative; display: block; }
+    .assignment-wrap input { width: 100%; padding-right: 55px; height: 38px; font-size: 13px; }
+    .count-mark {
+      position: absolute; top: 50%; right: 10px; transform: translateY(-50%);
+      color: var(--muted); font-size: 11px; font-weight: 700; pointer-events: none;
+    }
+
+    .question-board-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .question-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      padding: 16px;
+      overflow-y: auto;
+      max-height: calc(100vh - 400px);
+      align-content: start;
+    }
+
+    .question {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f8f7;
+      padding: 8px 4px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 48px;
+    }
+    .question b { font-size: 12px; margin-bottom: 2px; }
+    .question small { color: var(--muted); font-size: 10px; line-height: 1.1; }
+
+    .question.assigned-high { border-color: #efcccc; background: var(--red-soft); }
+    .question.assigned-middle { border-color: #f0d8a8; background: var(--amber-soft); }
+    .question.assigned-low { border-color: #c8dfea; background: var(--blue-soft); }
+    .question.conflict { border-color: var(--red); background: #f8d6d6; }
+
+    .assignment-status {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--line);
+      background: #fbfcfb;
+      padding: 14px 16px;
+      font-size: 13px;
+      border-radius: 0 0 16px 16px;
+      margin-top: auto;
+    }
+    .assignment-status strong { color: var(--green); }
+    .assignment-status.problem strong { color: var(--red); }
+
+    /* 개발자 서명 푸터 */
+    .footer-sig {
+      text-align: center;
+      color: #9cb1a9;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      margin-top: auto;
+      padding: 15px 0;
+    }
+
+    .print-only { display: none; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 15mm;
+      }
+      body { 
+        height: auto; 
+        overflow: visible; 
+        background: #fff; 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+      }
+      
+      /* 인쇄 시 불필요한 요소 숨김 */
+      .wrap { display: none !important; }
+      .footer-sig { display: none !important; }
+      
+      .print-only { 
+        display: block !important; 
+        font-family: "Malgun Gothic", sans-serif; 
+        color: #000; 
+      }
+
+      .print-header { 
+        text-align: center; 
+        margin-bottom: 15px; 
+        border-bottom: 2px solid #000; 
+        padding-bottom: 10px; 
+        position: relative;
+      }
+      .print-header h2 { font-size: 24px; margin: 0 0 8px 0; letter-spacing: -1px; }
+      .print-summary { font-size: 14px; font-weight: 600; }
+      
+      .print-diff-summary {
+        text-align: center;
+        font-size: 14px;
+        margin-bottom: 20px;
+        padding: 10px;
+        background: #f8f9fa;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+      }
+
+      .print-q-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        border-top: 1.5px solid #000;
+        border-left: 1.5px solid #000;
+      }
+      .print-q-cell {
+        display: flex;
+        border-bottom: 1px solid #000;
+        border-right: 1px solid #000;
+        font-size: 12px;
+      }
+      .print-q-cell.empty-cell { background: #fafafa; }
+      .print-q-cell > div {
+        padding: 6px 2px;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .print-q-num { width: 30%; font-weight: bold; background: #f0f0f0; border-right: 1px dotted #999; }
+      .print-q-diff { width: 35%; border-right: 1px dotted #999; }
+      .print-q-score { width: 35%; }
+      
+      .print-q-header { background: #e9ecef !important; font-weight: bold; }
+      .print-q-header > div { font-weight: 800; background: transparent; border-right: 1px solid #999; }
+      .print-q-header .print-q-score { border-right: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 화면용 UI -->
+  <main class="wrap">
+    
+    <div id="setupView">
+      <div class="setup-actions">
+        <input type="file" id="fileInput" style="display:none" accept=".json" onchange="loadData(event)" />
+        <button id="btnLoadLocal" class="btn btn-local" style="display:none;" type="button" onclick="loadFromLocal()">💻 브라우저 자동저장 내역 불러오기</button>
+        <button class="btn" type="button" onclick="document.getElementById('fileInput').click()">📂 공유받은 파일 불러오기</button>
+      </div>
+
+      <div class="title-row">
+        <div class="logo" aria-hidden="true">점</div>
+        <div>
+          <h1>시험 문항 배점 도우미</h1>
+          <p class="subtitle">서논술형을 제외한 <span style="color:var(--blue)">객관식 총 문항 수와 총점</span>을 입력해 주세요.</p>
+        </div>
+      </div>
+
+      <section class="panel" aria-label="시험 정보 입력">
+        <div class="setup">
+          <label>
+            <span class="label-text">과목명</span>
+            <input id="subjectName" type="text" placeholder="예: 공통국어2" value="" />
+          </label>
+          <label>
+            <span class="label-text">총 문항 수 <span class="label-desc">(객관식)</span></span>
+            <input id="questionCount" type="number" min="1" max="100" step="1" value="25" />
+          </label>
+          <label>
+            <span class="label-text">목표 총점 <span class="label-desc">(객관식)</span></span>
+            <input id="totalScore" type="number" min="0.1" max="1000" step="0.1" value="100" />
+          </label>
+          
+          <div class="setup-ratios">
+            <label>
+              <span class="label-text">상 난이도 (%)</span>
+              <input id="ratioHigh" type="number" min="0" max="100" step="1" value="20" />
+            </label>
+            <label>
+              <span class="label-text">중 난이도 (%)</span>
+              <input id="ratioMiddle" type="number" min="0" max="100" step="1" value="50" />
+            </label>
+            <label>
+              <span class="label-text">하 난이도 (%)</span>
+              <input id="ratioLow" type="number" min="0" max="100" step="1" value="30" />
+            </label>
+          </div>
+
+          <button id="calculateButton" class="calculate" type="button">배점표 생성하기</button>
+        </div>
+        <p class="rule-note">
+          입력하신 <strong>객관식 난이도 비율</strong>에 맞춰 문항 수를 나눕니다.<br>
+          배점을 낮은 점수부터 높은 점수까지 고르게 펼친 뒤 <strong>0.1점 단위</strong>로 객관식 총점에 정확히 맞춥니다.
+        </p>
+      </section>
+
+      <div id="errorBox" class="error" role="alert"></div>
+    </div>
+
+    <div id="resultView">
+      <div class="result-header">
+        <div class="title-row" style="margin-bottom: 0;">
+          <div class="logo" aria-hidden="true" style="width:36px; height:36px; font-size:16px;">점</div>
+          <h1>배점 할당 보드 <span id="boardSubjectName" style="font-size: 15px; color: var(--blue); font-weight: 700; margin-left: 8px;"></span></h1>
+        </div>
+        <div class="actions">
+          <span id="autoSaveToast" class="auto-save-toast">브라우저 자동 저장 완료 ✓</span>
+          <button class="btn btn-danger" type="button" onclick="clearAssignments()">🗑️ 배정 지우기</button>
+          <button class="btn" type="button" onclick="goBack()">← 설정 수정</button>
+          <button class="btn btn-save" type="button" onclick="saveDataFile()">📥 공유용 파일 다운로드</button>
+          <button class="btn" type="button" onclick="window.print()">🖨️ 인쇄</button>
+        </div>
+      </div>
+
+      <!-- 공동 출제 팁 안내 배너 -->
+      <div class="info-banner">
+        <span>💡</span>
+        <span><strong>공동 출제 팁:</strong> 내 작업은 브라우저에 실시간으로 자동 저장됩니다. 다른 선생님께 넘길 때만 우측 상단의 [📥 공유용 파일 다운로드]를 이용하세요.</span>
+      </div>
+
+      <div id="summary" class="summary"></div>
+
+      <div class="results-layout">
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <h2>계산된 배점 목록</h2>
+              <p>각 박스에 문항 번호를 쉼표로 입력하세요.</p>
+            </div>
+            <span id="totalChip" class="total-chip"></span>
+          </div>
+          <div id="scoreList"></div>
+        </section>
+
+        <section class="panel question-board-panel">
+          <div class="section-head">
+            <div>
+              <h2>문항 배정 현황</h2>
+              <p>입력 상태가 실시간으로 반영됩니다.</p>
+            </div>
+          </div>
+          <div id="questionGrid" class="question-grid"></div>
+          <div id="assignmentStatus" class="assignment-status"></div>
+        </section>
+      </div>
+    </div>
+    
+    <!-- 서명 푸터 -->
+    <div class="footer-sig">
+      Dev by hzuani | 2026.09.04 Updated
+    </div>
+  </main>
+
+  <div id="printArea" class="print-only" aria-hidden="true"></div>
+
+  <script>
+    const setupView = document.getElementById("setupView");
+    const resultView = document.getElementById("resultView");
+
+    const subjectNameInput = document.getElementById("subjectName");
+    const questionCountInput = document.getElementById("questionCount");
+    const totalScoreInput = document.getElementById("totalScore");
+    const ratioHighInput = document.getElementById("ratioHigh");
+    const ratioMiddleInput = document.getElementById("ratioMiddle");
+    const ratioLowInput = document.getElementById("ratioLow");
+    const calculateButton = document.getElementById("calculateButton");
+    
+    const errorBox = document.getElementById("errorBox");
+    const summary = document.getElementById("summary");
+    const scoreList = document.getElementById("scoreList");
+    const totalChip = document.getElementById("totalChip");
+    const assignmentStatus = document.getElementById("assignmentStatus");
+    const questionGrid = document.getElementById("questionGrid");
+    const printArea = document.getElementById("printArea");
+    const boardSubjectName = document.getElementById("boardSubjectName");
+
+    let currentPlan = null;
+    let assignments = {};
+    let autoSaveTimer;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (localStorage.getItem('examScorerData')) {
+        document.getElementById('btnLoadLocal').style.display = 'inline-flex';
+      }
+    });
+
+    function goBack() {
+      resultView.style.display = "none";
+      setupView.style.display = "block";
+    }
+
+    function clearAssignments() {
+      if (!confirm("입력한 모든 문항 번호 배정을 지우시겠습니까?")) return;
+      
+      assignments = {};
+      document.querySelectorAll("input[data-key]").forEach(input => {
+        input.value = "";
+        input.setAttribute('value', "");
+      });
+      
+      updateAssignmentView();
+      saveToLocal();
+    }
+
+    // 파일 이름에 과목명과 현재 시간 추가
+    function saveDataFile() {
+      const data = {
+        subj: subjectNameInput.value,
+        q: questionCountInput.value,
+        t: totalScoreInput.value,
+        rh: ratioHighInput.value,
+        rm: ratioMiddleInput.value,
+        rl: ratioLowInput.value,
+        assignments: assignments
+      };
+      const json = JSON.stringify(data);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      
+      const now = new Date();
+      const yy = String(now.getFullYear()).slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const min = String(now.getMinutes()).padStart(2, '0');
+      const timeStr = `${yy}${mm}${dd}_${hh}${min}`;
+      
+      const subj = subjectNameInput.value.trim();
+      const prefix = subj ? `[${subj}] ` : "";
+      
+      a.href = url;
+      a.download = `${prefix}배점작업내역_${timeStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function saveToLocal() {
+      const data = {
+        subj: subjectNameInput.value,
+        q: questionCountInput.value,
+        t: totalScoreInput.value,
+        rh: ratioHighInput.value,
+        rm: ratioMiddleInput.value,
+        rl: ratioLowInput.value,
+        assignments: assignments
+      };
+      localStorage.setItem('examScorerData', JSON.stringify(data));
+      
+      const toast = document.getElementById("autoSaveToast");
+      if (toast) {
+        toast.classList.add("show");
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+          toast.classList.remove("show");
+        }, 2000);
+      }
+    }
+
+    function loadFromLocal() {
+      const saved = localStorage.getItem('examScorerData');
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        if (data.subj !== undefined) subjectNameInput.value = data.subj;
+        questionCountInput.value = data.q;
+        totalScoreInput.value = data.t;
+        ratioHighInput.value = data.rh;
+        ratioMiddleInput.value = data.rm;
+        ratioLowInput.value = data.rl;
+
+        assignments = data.assignments || {};
+        calculate();
+
+        updateAssignmentView();
+      } catch (err) {
+        console.error("로컬 데이터를 불러오는 중 오류가 발생했습니다.", err);
+      }
+    }
+
+    function loadData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          
+          if(data.subj !== undefined) subjectNameInput.value = data.subj;
+          questionCountInput.value = data.q;
+          totalScoreInput.value = data.t;
+          ratioHighInput.value = data.rh;
+          ratioMiddleInput.value = data.rm;
+          ratioLowInput.value = data.rl;
+
+          assignments = data.assignments || {};
+          calculate();
+
+          updateAssignmentView();
+          saveToLocal(); 
+          event.target.value = "";
+          
+        } catch (err) {
+          alert("파일을 불러오는 중 오류가 발생했습니다. 올바른 파일인지 확인해 주세요.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function splitQuestionCounts(total, ratios) {
+      const calculated = ratios.map((item, index) => {
+        const exact = total * item.ratio;
+        return {
+          ...item,
+          index,
+          count: Math.floor(exact),
+          fraction: exact - Math.floor(exact)
+        };
+      });
+
+      let left = total - calculated.reduce((sum, item) => sum + item.count, 0);
+
+      calculated
+        .slice()
+        .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+        .forEach((item) => {
+          if (left > 0) {
+            calculated[item.index].count += 1;
+            left -= 1;
+          }
+        });
+
+      return calculated;
+    }
+
+    function makeScoreGroups(levels, totalUnits) {
+      const totalQuestions = levels.reduce((sum, level) => sum + level.count, 0);
+      const lowCount = levels.find((level) => level.difficulty === "하").count;
+      const middleCount = levels.find((level) => level.difficulty === "중").count;
+
+      const weights = Array.from(
+        { length: totalQuestions },
+        (_, index) =>
+          totalQuestions === 1 ? 1 : 0.75 + (0.5 * index) / (totalQuestions - 1)
+      );
+
+      const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+
+      const slots = weights.map((weight, index) => {
+        const rawUnits = (totalUnits * weight) / weightSum;
+
+        let difficulty;
+        let className;
+
+        if (index < lowCount) {
+          difficulty = "하";
+          className = "low";
+        } else if (index < lowCount + middleCount) {
+          difficulty = "중";
+          className = "middle";
+        } else {
+          difficulty = "상";
+          className = "high";
+        }
+
+        return {
+          index,
+          difficulty,
+          className,
+          units: Math.max(1, Math.floor(rawUnits)),
+          fraction: rawUnits - Math.floor(rawUnits)
+        };
+      });
+
+      let remainder = totalUnits - slots.reduce((sum, slot) => sum + slot.units, 0);
+
+      slots
+        .slice()
+        .sort((a, b) => b.fraction - a.fraction || b.index - a.index)
+        .forEach((slot) => {
+          if (remainder > 0) {
+            slot.units += 1;
+            remainder -= 1;
+          }
+        });
+
+      if (remainder < 0) {
+        slots
+          .slice()
+          .sort((a, b) => b.units - a.units || b.index - a.index)
+          .forEach((slot) => {
+            if (remainder < 0 && slot.units > 1) {
+              slot.units -= 1;
+              remainder += 1;
+            }
+          });
+      }
+
+      const grouped = new Map();
+
+      slots.forEach((slot) => {
+        const key = `${slot.difficulty}-${slot.units}`;
+        const existing = grouped.get(key);
+
+        if (existing) {
+          existing.count += 1;
+        } else {
+          grouped.set(key, {
+            key,
+            difficulty: slot.difficulty,
+            className: slot.className,
+            score: slot.units / 10,
+            count: 1
+          });
+        }
+      });
+
+      const levelOrder = { 하: 0, 중: 1, 상: 2 };
+
+      return Array.from(grouped.values()).sort(
+        (a, b) => a.score - b.score || levelOrder[a.difficulty] - levelOrder[b.difficulty]
+      );
+    }
+
+    function calculate() {
+      const questionCount = Number(questionCountInput.value);
+      const totalScore = Number(totalScoreInput.value);
+      
+      const rHigh = Number(ratioHighInput.value);
+      const rMiddle = Number(ratioMiddleInput.value);
+      const rLow = Number(ratioLowInput.value);
+
+      errorBox.style.display = "none";
+      errorBox.textContent = "";
+
+      if (!Number.isInteger(questionCount) || questionCount < 1 || questionCount > 100) {
+        showError("총 문항 수는 1개부터 100개 사이의 정수로 입력해 주세요.");
+        return;
+      }
+      if (!Number.isFinite(totalScore) || totalScore <= 0 || totalScore > 1000) {
+        showError("목표 총점은 0점보다 크고 1,000점 이하로 입력해 주세요.");
+        return;
+      }
+      if (Math.abs(totalScore * 10 - Math.round(totalScore * 10)) > 0.000001) {
+        showError("목표 총점은 0.1점 단위로 입력해 주세요.");
+        return;
+      }
+      
+      // 비율 검증: 각각 0~100 사이의 정수인지 확인
+      if (![rHigh, rMiddle, rLow].every(r => Number.isInteger(r) && r >= 0 && r <= 100)) {
+        showError("난이도 비율은 각각 0에서 100 사이의 정수로 입력해 주세요.");
+        return;
+      }
+      
+      if (rHigh + rMiddle + rLow !== 100) {
+        showError("상, 중, 하 비율의 합이 100%가 되어야 합니다.");
+        return;
+      }
+
+      const totalUnits = Math.round(totalScore * 10);
+      if (totalUnits < questionCount) {
+        showError("각 문항에 최소 0.1점을 주기에는 목표 총점이 부족합니다.");
+        return;
+      }
+
+      const dynamicRatios = [
+        { difficulty: "상", ratio: rHigh / 100, className: "high" },
+        { difficulty: "중", ratio: rMiddle / 100, className: "middle" },
+        { difficulty: "하", ratio: rLow / 100, className: "low" }
+      ];
+
+      const levels = splitQuestionCounts(questionCount, dynamicRatios);
+      const groups = makeScoreGroups(levels, totalUnits);
+
+      currentPlan = {
+        questionCount,
+        totalScore,
+        levels,
+        groups
+      };
+
+      const newAssignments = {};
+      groups.forEach(group => {
+        newAssignments[group.key] = assignments[group.key] || "";
+      });
+      assignments = newAssignments;
+
+      const subj = subjectNameInput.value.trim();
+      boardSubjectName.textContent = subj ? `[${subj}]` : "";
+
+      renderPlan();
+      saveToLocal(); 
+      
+      setupView.style.display = "none";
+      resultView.style.display = "flex";
+    }
+
+    function showError(message) {
+      errorBox.textContent = message;
+      errorBox.style.display = "block";
+    }
+
+    function renderPlan() {
+      summary.innerHTML = currentPlan.levels
+        .map(
+          (level) => `
+            <div class="summary-card">
+              <span class="level level-${level.className}">
+                난이도 ${level.difficulty}
+              </span>
+              <strong>${level.count}<small>문항</small></strong>
+            </div>
+          `
+        ).join("");
+
+      totalChip.textContent = `객관식 총 ${formatScore(currentPlan.totalScore)}점`;
+
+      const diffConfigs = [
+        { key: "상", className: "high" },
+        { key: "중", className: "middle" },
+        { key: "하", className: "low" }
+      ];
+
+      scoreList.innerHTML = `<div class="score-columns">` + 
+        diffConfigs.map(diff => {
+          const diffGroups = currentPlan.groups.filter(g => g.difficulty === diff.key);
+          const totalCount = diffGroups.reduce((sum, g) => sum + g.count, 0);
+          
+          return `
+            <div class="score-column">
+              <div class="score-column-header ${diff.className}">
+                <span>난이도 ${diff.key}</span>
+                <span>${totalCount}문항</span>
+              </div>
+              <div class="score-column-body">
+                ${diffGroups.map(group => `
+                  <div class="score-row">
+                    <div class="score-info">
+                      <strong class="score-value">${formatScore(group.score)}점</strong>
+                      <span class="needed" data-needed-key="${group.key}">${group.count}문항</span>
+                    </div>
+                    <label class="assignment-wrap">
+                      <span class="sr-only">문항 번호</span>
+                      <!-- HTML value 속성 오염 방지를 위해 초기 value는 비워두고 js에서 주입 -->
+                      <input type="text" inputmode="numeric" data-key="${group.key}" placeholder="예: 1, 4" autocomplete="off" />
+                      <span class="count-mark" data-count-key="${group.key}">0/${group.count}</span>
+                    </label>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          `;
+        }).join("") + `</div>`;
+
+      // 입력된 데이터 복원 및 이벤트 등록
+      scoreList.querySelectorAll("input[data-key]").forEach((input) => {
+        const key = input.dataset.key;
+        if (assignments[key]) {
+          input.value = assignments[key];
+          input.setAttribute('value', assignments[key]);
+        }
+        
+        input.addEventListener("input", (event) => {
+          assignments[event.target.dataset.key] = event.target.value;
+          event.target.setAttribute('value', event.target.value);
+          updateAssignmentView();
+          saveToLocal();
+        });
+      });
+
+      updateAssignmentView();
+    }
+
+    function parseNumbers(text) {
+      const tokens = text.trim().split(/[\s,，]+/).filter(Boolean);
+      const numbers = [];
+      const invalid = [];
+
+      tokens.forEach((token) => {
+        const number = Number(token);
+        if (!Number.isInteger(number)) {
+          invalid.push(token);
+        } else {
+          numbers.push(number);
+        }
+      });
+
+      return { numbers, invalid };
+    }
+
+    function updateAssignmentView() {
+      const appearances = new Map();
+      const problems = [];
+
+      currentPlan.groups.forEach((group) => {
+        const parsed = parseNumbers(assignments[group.key] || "");
+        const countMark = document.querySelector(`[data-count-key="${group.key}"]`);
+        const neededBadge = document.querySelector(`[data-needed-key="${group.key}"]`);
+
+        countMark.textContent = `${parsed.numbers.length}/${group.count}`;
+        countMark.style.color =
+          parsed.numbers.length === group.count && parsed.invalid.length === 0
+            ? "var(--green)"
+            : "var(--muted)";
+            
+        if (neededBadge) {
+          if (parsed.numbers.length > 0) {
+            neededBadge.classList.add("filled");
+          } else {
+            neededBadge.classList.remove("filled");
+          }
+        }
+
+        if (parsed.invalid.length > 0) {
+          problems.push("문항 번호는 정수로 입력해 주세요.");
+        }
+        if (parsed.numbers.length > group.count) {
+          problems.push(`${formatScore(group.score)}점 문항이 초과 입력되었습니다.`);
+        }
+
+        parsed.numbers.forEach((number) => {
+          if (number < 1 || number > currentPlan.questionCount) {
+            problems.push(`문항 번호는 1~${currentPlan.questionCount} 사이여야 합니다.`);
+            return;
+          }
+
+          const list = appearances.get(number) || [];
+          list.push(group);
+          appearances.set(number, list);
+        });
+      });
+
+      const duplicates = Array.from(appearances.entries())
+        .filter(([, groups]) => groups.length > 1)
+        .map(([number]) => number);
+
+      if (duplicates.length > 0) {
+        problems.push(`중복 문항: ${duplicates.join(", ")}번`);
+      }
+
+      const assignedOnce = Array.from(appearances.values()).filter(
+        (groups) => groups.length === 1
+      ).length;
+
+      if (problems.length === 0 && assignedOnce === currentPlan.questionCount) {
+        assignmentStatus.className = "assignment-status";
+        assignmentStatus.innerHTML = "<span>모든 문항 배정이 끝났습니다.</span><strong>배정 완료 ✓</strong>";
+      } else {
+        assignmentStatus.className = "assignment-status problem";
+        assignmentStatus.innerHTML = `
+          <span>${problems[0] || "아직 배정되지 않은 문항이 있습니다."}</span>
+          <strong>${assignedOnce} / ${currentPlan.questionCount}문항</strong>
+        `;
+      }
+
+      questionGrid.innerHTML = Array.from(
+        { length: currentPlan.questionCount },
+        (_, index) => {
+          const number = index + 1;
+          const groups = appearances.get(number) || [];
+          const group = groups[0];
+
+          const stateClass = groups.length > 1
+            ? "conflict"
+            : group
+              ? `assigned-${group.className}`
+              : "";
+
+          const detail = groups.length > 1
+            ? "중복"
+            : group
+              ? `${group.difficulty} · ${formatScore(group.score)}`
+              : "미배정";
+
+          return `
+            <div class="question ${stateClass}">
+              <b>${number}번</b>
+              <small>${detail}</small>
+            </div>
+          `;
+        }
+      ).join("");
+
+      buildPrintLayout(appearances);
+    }
+
+    function escapeHtml(unsafe) {
+      return (unsafe || "").replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function buildPrintLayout(appearances) {
+      const subject = subjectNameInput.value.trim();
+      const safeSubject = escapeHtml(subject);
+      const titlePrefix = safeSubject ? `[${safeSubject}] ` : "";
+      
+      let printHtml = `
+        <div class="print-header">
+          <h2>${titlePrefix}객관식 문항 배점표</h2>
+          <div class="print-summary">
+            <span>총 ${currentPlan.questionCount}문항</span> /
+            <span>객관식 총점: ${formatScore(currentPlan.totalScore)}점</span>
+          </div>
+        </div>
+        
+        <div class="print-diff-summary">
+          ${currentPlan.levels.map(l => `<strong>${l.difficulty}</strong> 난이도: ${l.count}문항`).join(" &nbsp;|&nbsp; ")}
+        </div>
+        
+        <div class="print-q-grid">
+      `;
+
+      for(let i=0; i<4; i++) {
+        printHtml += `
+          <div class="print-q-cell print-q-header">
+            <div class="print-q-num">번호</div>
+            <div class="print-q-diff">난이도</div>
+            <div class="print-q-score">배점</div>
+          </div>
+        `;
+      }
+
+      for (let i = 1; i <= currentPlan.questionCount; i++) {
+        const groups = appearances.get(i) || [];
+        const group = groups[0];
+        const diff = groups.length > 1 ? "중복" : (group ? group.difficulty : "");
+        const score = groups.length > 1 ? "오류" : (group ? formatScore(group.score) : "");
+
+        printHtml += `
+          <div class="print-q-cell">
+            <div class="print-q-num">${i}</div>
+            <div class="print-q-diff">${diff}</div>
+            <div class="print-q-score">${score}</div>
+          </div>
+        `;
+      }
+
+      const remainder = currentPlan.questionCount % 4;
+      if (remainder !== 0) {
+        for(let i=0; i < 4 - remainder; i++) {
+          printHtml += `
+            <div class="print-q-cell empty-cell">
+              <div class="print-q-num"></div>
+              <div class="print-q-diff"></div>
+              <div class="print-q-score"></div>
+            </div>
+          `;
+        }
+      }
+
+      printHtml += `</div>`;
+      printArea.innerHTML = printHtml;
+    }
+
+    function formatScore(value) {
+      return Number(value).toFixed(1);
+    }
+
+    calculateButton.addEventListener("click", calculate);
+
+    [questionCountInput, totalScoreInput, ratioHighInput, ratioMiddleInput, ratioLowInput].forEach((input) => {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          calculate();
+        }
+      });
+    });
+
+  </script>
+</body>
+</html>
